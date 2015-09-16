@@ -51,7 +51,9 @@ def preprocessing(path, columns, pos_tags, doc_size, doc_split, stopwordlist):
 
             df = pd.read_csv(filepath, sep="\t")
             df = df[columns]
+
             df = df.groupby('CPOS')
+            print(df.get_group('ADJ'))
 
             doc = pd.DataFrame()
             for p in pos_tags:                          # collect only the specified parts-of-speech
@@ -113,9 +115,6 @@ model = LdaMulticore(corpus=corpus, id2word=dictionary, num_topics=no_of_topics,
 #model = LdaModel(corpus=corpus, id2word=dictionary, num_topics=no_of_topics, passes=no_of_passes,
 #                 eval_every=1, chunksize=1, alpha='auto')
 print(model)
-
-# chunksize=mm.num_docs
-# TODO: bessere values finden für update_every=1, chunksize=1
 
 model.save(foldername+".lda")
 
