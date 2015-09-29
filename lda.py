@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-from gensim.corpora import Dictionary
+from gensim.corpora import MmCorpus, Dictionary
 from gensim.models import LdaMulticore, LdaModel
-import pyLDAvis.gensim
 import pandas as pd
+import numpy as np
 import os
 import sys
 
@@ -14,19 +14,34 @@ import sys
 #########################
 # CONFIGURATION
 
-no_of_topics = 20                                       # no. of topics to be generated
-no_of_passes = 200                                      # no. of lda iterations
-
-# csv reader
+# input
 columns = ['ParagraphId', 'TokenId', 'Lemma', 'CPOS', 'NamedEntity']   # columns to read from csv file
-pos_tags = ['ADJ', 'NN']   #['ADJ', 'NN', 'V']                           # parts-of-speech to include into the model
-
-# document size
-doc_size = 1000                                          # in words
-doc_split = 0                                           # 1: on, 0: off -- uses ParagraphId
+pos_tags = ['ADJ', 'NN']                        # parts-of-speech to include into the model
 
 # stopwords
-stopwordlist = ""                                       # "/path/to/txt"
+stopwordlist = "txt/stopwords.txt"              # path to text file, e.g. stopwords.txt in the same directory as the script
+
+# document size (in words)
+#doc_size = 1000000                             # set to arbitrarily large value to use original doc size
+doc_size = 1000                                 # the document size for LDA commonly ranges from 500-2000 words
+doc_split = 0                                   # uses the pipeline's ParagraphId to split text into documents, overrides doc_size - 1: on, 0: off
+
+# model parameters, cf. https://radimrehurek.com/gensim/models/ldamodel.html
+no_of_topics = 20                               # no. of topics to be generated
+no_of_passes = 200                              # no. of lda iterations - the more the better, but increases computing time
+
+eval = 1                                        # perplexity estimation every n chunks - the smaller the better, but also increases computing time
+chunk = 10                                      # documents to process at once
+
+alpha = "symmetric"                             # "symmetric", "asymmetric", "auto", or array (default: a symmetric 1.0/num_topics prior)
+                                                # affects sparsity of the document-topic (theta) distribution
+
+# custom alpha may increase topic coherence, but may also produce more topics with zero probability
+#alpha = np.array([ 0.02, 0.02, 0.02, 0.03, 0.03, 0.03, 0.04, 0.04, 0.04, 0.05,
+#                   0.05, 0.04, 0.04, 0.04, 0.03, 0.03, 0.03, 0.02, 0.02, 0.02])
+
+eta = None                                      # can be a number (int/float), an array, or None
+                                                # affects topic-word (lambda) distribution - not necessarily beneficial to topic coherence
 
 
 #########################
@@ -34,6 +49,7 @@ stopwordlist = ""                                       # "/path/to/txt"
 
 def preprocessing(path, columns, pos_tags, doc_size, doc_split, stopwordlist):
     docs = []
+    doc_labels = []
     stopwords = ""
 
     print("reading files ...\n")
@@ -51,9 +67,7 @@ def preprocessing(path, columns, pos_tags, doc_size, doc_split, stopwordlist):
 
             df = pd.read_csv(filepath, sep="\t")
             df = df[columns]
-
             df = df.groupby('CPOS')
-            print(df.get_group('ADJ'))
 
             doc = pd.DataFrame()
             for p in pos_tags:                          # collect only the specified parts-of-speech
@@ -72,12 +86,17 @@ def preprocessing(path, columns, pos_tags, doc_size, doc_split, stopwordlist):
                 doc = doc.groupby('ParagraphId')
                 for para_id, para in doc:
                     docs.append(para['Lemma'].values.astype(str))
+                    doc_labels.append(file.split(".")[0]+" #"+str(para_id))     # use filename + doc id as plot label
             else:                                       # size according to doc_size
                 doc = doc.sort(columns='TokenId')
+                i = 1
                 while(doc_size < doc.shape[0]):
                     docs.append(doc[:doc_size]['Lemma'].values.astype(str))
+                    doc_labels.append(file.split(".")[0]+" #"+str(i))
                     doc = doc.drop(doc.index[:doc_size])        # drop doc_size rows
+                    i += 1
                 docs.append(doc['Lemma'].values.astype(str))    # add the rest
+                doc_labels.append(file.split(".")[0]+" #"+str(i))
 
     #for doc in docs: print(str(len(doc)))              # display resulting doc sizes
     #print(stopwords)
@@ -93,7 +112,7 @@ def preprocessing(path, columns, pos_tags, doc_size, doc_split, stopwordlist):
     dictionary = Dictionary(texts)                      # vectorize
     corpus = [dictionary.doc2bow(text) for text in texts]
 
-    return dictionary, corpus
+    return dictionary, corpus, doc_labels
 
 
 #########################
@@ -107,26 +126,36 @@ if len(sys.argv) < 2:
 path = sys.argv[1]
 foldername = path.split("/")[-1]
 
-dictionary, corpus = preprocessing(path, columns, pos_tags, doc_size, doc_split, stopwordlist)
+dictionary, corpus, doc_labels = preprocessing(path, columns, pos_tags, doc_size, doc_split, stopwordlist)
+
 
 print("fitting the model ...\n")
-model = LdaMulticore(corpus=corpus, id2word=dictionary, num_topics=no_of_topics, passes=no_of_passes,
-                 eval_every=1, chunksize=1)
+
 #model = LdaModel(corpus=corpus, id2word=dictionary, num_topics=no_of_topics, passes=no_of_passes,
-#                 eval_every=1, chunksize=1, alpha='auto')
-print(model)
+#                 eval_every=eval, chunksize=chunk, alpha=alpha, eta=eta)
 
-model.save(foldername+".lda")
+model = LdaMulticore(corpus=corpus, id2word=dictionary, num_topics=no_of_topics, passes=no_of_passes,
+                 eval_every=eval, chunksize=chunk, alpha=alpha, eta=eta)
+
+print(model, "\n")
+
+topics = model.show_topics(num_topics=no_of_topics)
+
+for item, i in zip(topics, enumerate(topics)):
+    print("topic #"+str(i[0])+": "+item+"\n")
 
 
-#########################
-# VISUALIZATION
+print("saving ...\n")
 
-# cf. https://pyldavis.readthedocs.org/en/latest/modules/API.html
+if not os.path.exists("out"): os.makedirs("out")
 
-print("displaying results ...\n")
+with open("out/"+foldername+"_doclabels.txt", "w") as f:
+    for item in doc_labels: f.write(item+"\n")
 
-vis = pyLDAvis.gensim.prepare(model, corpus, dictionary)
+with open("out/"+foldername+"_topics.txt", "w") as f:
+    for item, i in zip(topics, enumerate(topics)):
+        f.write("topic #"+str(i[0])+": "+item+"\n")
 
-pyLDAvis.save_html(vis, foldername+".html")
-pyLDAvis.show(vis)
+dictionary.save("out/"+foldername+".dict")
+MmCorpus.serialize("out/"+foldername+".mm", corpus)
+model.save("out/"+foldername+".lda")
