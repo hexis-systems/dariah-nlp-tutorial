@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import os
 import sys
+import csv
 
 #import logging
 #logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
@@ -15,8 +16,8 @@ import sys
 # CONFIGURATION
 
 # input
-columns = ['ParagraphId', 'TokenId', 'Lemma', 'CPOS', 'NamedEntity']   # columns to read from csv file
-pos_tags = ['ADJ', 'NN']                        # parts-of-speech to include into the model
+columns = ['ParagraphId', 'TokenId', 'Lemma', 'CPOS']   #, 'NamedEntity']   # columns to read from csv file
+pos_tags = ['ADJ', 'NN', 'V']                        # parts-of-speech to include into the model
 
 # stopwords
 stopwordlist = "txt/stopwords.txt"              # path to text file, e.g. stopwords.txt in the same directory as the script
@@ -24,16 +25,16 @@ stopwordlist = "txt/stopwords.txt"              # path to text file, e.g. stopwo
 # document size (in words)
 #doc_size = 1000000                             # set to arbitrarily large value to use original doc size
 doc_size = 1000                                 # the document size for LDA commonly ranges from 500-2000 words
-doc_split = 0                                   # uses the pipeline's ParagraphId to split text into documents, overrides doc_size - 1: on, 0: off
+doc_split = 0                                   # set to 1 to use the pipeline's ParagraphId feature instead of doc_size
 
 # model parameters, cf. https://radimrehurek.com/gensim/models/ldamodel.html
 no_of_topics = 20                               # no. of topics to be generated
-no_of_passes = 200                              # no. of lda iterations - the more the better, but increases computing time
+no_of_passes = 100                              # no. of lda iterations - the more the better, but increases computing time
 
 eval = 1                                        # perplexity estimation every n chunks - the smaller the better, but also increases computing time
 chunk = 10                                      # documents to process at once
 
-alpha = "symmetric"                             # "symmetric", "asymmetric", "auto", or array (default: a symmetric 1.0/num_topics prior)
+alpha = "auto"                             # "symmetric", "asymmetric", "auto", or array (default: a symmetric 1.0/num_topics prior)
                                                 # affects sparsity of the document-topic (theta) distribution
 
 # custom alpha may increase topic coherence, but may also produce more topics with zero probability
@@ -65,7 +66,8 @@ def preprocessing(path, columns, pos_tags, doc_size, doc_split, stopwordlist):
             filepath = path+"/"+file
             print(filepath)
 
-            df = pd.read_csv(filepath, sep="\t")
+            df = pd.read_csv(filepath, sep="\t", quoting=csv.QUOTE_NONE)
+            #df = pd.read_csv(filepath)
             df = df[columns]
             df = df.groupby('CPOS')
 
@@ -78,8 +80,8 @@ def preprocessing(path, columns, pos_tags, doc_size, doc_split, stopwordlist):
             names = df.get_group('B-PER')['Lemma'].values.astype(str)
             names += df.get_group('I-PER')['Lemma'].values.astype(str)
             """
-            names = df.get_group('NP')['Lemma'].values.astype(str)
-            stopwords += names.tolist()
+            #names = df.get_group('NP')['Lemma'].values.astype(str)
+            #stopwords += names.tolist()
 
             # construct documents
             if doc_split:                               # size according to paragraph id
@@ -131,11 +133,11 @@ dictionary, corpus, doc_labels = preprocessing(path, columns, pos_tags, doc_size
 
 print("fitting the model ...\n")
 
-#model = LdaModel(corpus=corpus, id2word=dictionary, num_topics=no_of_topics, passes=no_of_passes,
-#                 eval_every=eval, chunksize=chunk, alpha=alpha, eta=eta)
-
-model = LdaMulticore(corpus=corpus, id2word=dictionary, num_topics=no_of_topics, passes=no_of_passes,
+model = LdaModel(corpus=corpus, id2word=dictionary, num_topics=no_of_topics, passes=no_of_passes,
                  eval_every=eval, chunksize=chunk, alpha=alpha, eta=eta)
+
+#model = LdaMulticore(corpus=corpus, id2word=dictionary, num_topics=no_of_topics, passes=no_of_passes,
+#                 eval_every=eval, chunksize=chunk, alpha=alpha, eta=eta)
 
 print(model, "\n")
 
