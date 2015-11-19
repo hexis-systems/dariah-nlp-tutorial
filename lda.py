@@ -16,7 +16,8 @@ import csv
 
 # input
 columns = ['ParagraphId', 'TokenId', 'Lemma', 'CPOS']   #, 'NamedEntity']   # columns to read from csv file
-pos_tags = ['ADJ', 'NN', 'V']                        # parts-of-speech to include into the model
+pos_tags = ['ADJ', 'NN', 'V']                        # parts-of-speech to include into the model, following dkpro's
+                                            # coarse grained tagset: ADJ, ADV, ART, CARD, CONJ, N (NP, NN), O, PP, PR, V, PUNC
 
 # stopwords
 stopwordlist = "stopwords.txt"              # path to text file, e.g. stopwords.txt in the same directory as the script
