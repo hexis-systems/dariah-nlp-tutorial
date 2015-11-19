@@ -3,7 +3,6 @@
 from gensim.corpora import MmCorpus, Dictionary
 from gensim.models import LdaMulticore, LdaModel
 import pandas as pd
-import numpy as np
 import os
 import sys
 import csv
@@ -20,7 +19,7 @@ columns = ['ParagraphId', 'TokenId', 'Lemma', 'CPOS']   #, 'NamedEntity']   # co
 pos_tags = ['ADJ', 'NN', 'V']                        # parts-of-speech to include into the model
 
 # stopwords
-stopwordlist = "txt/stopwords.txt"              # path to text file, e.g. stopwords.txt in the same directory as the script
+stopwordlist = "stopwords.txt"              # path to text file, e.g. stopwords.txt in the same directory as the script
 
 # document size (in words)
 #doc_size = 1000000                             # set to arbitrarily large value to use original doc size
