@@ -22,7 +22,13 @@ def graph_terms_to_topics(lda, outfile, num_terms=30):
         for term in terms:
             G.add_edge(topicLabel, term)
 
+
+    # cf. http://networkx.lanl.gov/reference/drawing.html#module-networkx.drawing.layout
     pos = nx.spring_layout(G, k=0.060, iterations=30) # positions for all nodes - k=0.020, iterations=30
+    #pos = nx.circular_layout(G)
+    #pos = nx.shell_layout(G)
+    #pos = nx.spectral_layout(G)
+
 
     # we'll plot topic labels and terms labels separately to have different colours
     g = G.subgraph([topic for topic, _ in pos.items() if "topic " in topic])
