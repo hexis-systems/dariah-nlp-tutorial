@@ -144,7 +144,7 @@ print(model, "\n")
 topics = model.show_topics(num_topics=no_of_topics)
 
 for item, i in zip(topics, enumerate(topics)):
-    print("topic #"+str(i[0])+": "+item+"\n")
+    print("topic #"+str(i[0])+": "+str(item)+"\n")
 
 
 print("saving ...\n")
@@ -156,7 +156,7 @@ with open("out/"+foldername+"_doclabels.txt", "w") as f:
 
 with open("out/"+foldername+"_topics.txt", "w") as f:
     for item, i in zip(topics, enumerate(topics)):
-        f.write("topic #"+str(i[0])+": "+item+"\n")
+        f.write("topic #"+str(i[0])+": "+str(item)+"\n")
 
 dictionary.save("out/"+foldername+".dict")
 MmCorpus.serialize("out/"+foldername+".mm", corpus)
