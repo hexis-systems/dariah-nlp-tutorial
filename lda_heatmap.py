@@ -42,7 +42,7 @@ for doc, i in zip(corpus, range(no_of_docs)):           # use document bow from 
 
 topic_labels = []
 for i in range(no_of_topics):
-    topic_terms = [x[1] for x in model.show_topic(i, topn=3)]           # show_topic() returns tuples (word_prob, word)
+    topic_terms = [x[0] for x in model.show_topic(i, topn=3)]           # show_topic() returns tuples (word_prob, word)
     topic_labels.append(" ".join(topic_terms))
 
 #print(doc_topic)
