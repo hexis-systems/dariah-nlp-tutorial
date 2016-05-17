@@ -38,11 +38,12 @@ for doc, i in zip(corpus, range(no_of_docs)):           # use document bow from 
     for topic in topic_dist:                            # topic_dist is a list of tuples (topic_id, topic_prob)
         doc_topic[i][topic[0]] = topic[1]               # save topic probability
 
+
 # get plot labels
 
 topic_labels = []
 for i in range(no_of_topics):
-    topic_terms = [x[1] for x in model.show_topic(i, topn=3)]           # show_topic() returns tuples (word_prob, word)
+    topic_terms = [x[0] for x in model.show_topic(i, topn=3)]           # show_topic() returns tuples (word_prob, word)
     topic_labels.append(" ".join(topic_terms))
 
 #print(doc_topic)
